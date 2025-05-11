@@ -1,5 +1,6 @@
-#include "include/decoder.h"
+#include "../include/decoder.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -99,6 +100,15 @@ char* decode_reg(int const reg, bool const wide) {
         default:
             perror("Invalid register value! Corrupted data!");
     }
+    assert(false);
+    return NULL;
+}
+
+// TODO:
+char* decode_effective_addr(uint8_t const reg, bool const wide) {
+    if (wide || reg > 1) {
+        return NULL;
+    }
     return NULL;
 }
 
@@ -123,7 +133,7 @@ char** decoder_decode(Decoder const *const self) {
         }
     }
 
-    strncpy(result[lines], "bits 16\n", 9);
+    strncpy(result[lines], "bits 16", 9);
     lines++;
 
     for (size_t i = 0; self->instructions[i]; i++) {
@@ -155,7 +165,8 @@ char** decoder_decode(Decoder const *const self) {
             uint16_t immediat = data_lo + (data_hi << 8);
 
             char* buff = calloc(1024, sizeof(char));
-            char fmt[] = "\nmove %s, %d";
+            assert(buff != NULL);
+            char fmt[] = "mov %s, %d";
             size_t fmt_size = sprintf(buff, fmt, reg, immediat);
 
             strncpy(result[lines], buff, fmt_size);
@@ -163,7 +174,42 @@ char** decoder_decode(Decoder const *const self) {
 
             lines++;
         } else if ((opcode & REGMEM_TO_FROM_REG) == REGMEM_TO_FROM_REG) {
-            printf("TODO\n");
+            if (self->instructions[i + 1] == '\0') {
+                perror("Missing reg/mem to/from reg data\n");
+                return NULL;
+            }
+
+            i += 1;
+            uint8_t const operand = self->instructions[i];
+
+            // 1 for word, 0 for byte
+            bool const wide = (opcode & 0x01) > 0;
+
+            uint8_t const reg = (operand & 0x38) >> 3;
+            char const *const reg_field1 = decode_reg(reg, wide);
+
+            uint8_t const reg_or_mem = operand & 0x07;
+
+            // 0 means that REG is the source
+            // 1 means that REG is the destination
+            bool const direction = (opcode & 0x02) > 0;
+            char const * reg_field2 = decode_reg(reg_or_mem, wide);
+            if (direction) {
+                reg_field2 = decode_effective_addr(reg_or_mem, wide);
+            }
+
+            // const mod = (operand & 0b11000000) >> 6;
+
+            char *const buff = calloc(1024, sizeof(char));
+            assert(buff != NULL);
+
+            char const fmt[] = "mov %s, %s";
+            size_t const fmt_size = sprintf(buff, fmt, reg_field2, reg_field1);
+
+            strncpy(result[lines], buff, fmt_size);
+            free(buff);
+
+            lines++;
         } else {
             perror("Unsupported opcode\n");
         }

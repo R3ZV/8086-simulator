@@ -2,10 +2,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "include/decoder.h"
+#include "../include/decoder.h"
 
 int main() {
-    Decoder decoder = decoder_init("../tests/load_immediat");
+    Decoder decoder = decoder_init("../asm/many_register_mov");
     char** result = decoder_decode(&decoder);
     if (result == NULL) {
         perror("ERR: Couldn't decode!");
@@ -14,9 +14,8 @@ int main() {
 
     printf("Result:\n");
     for (size_t i = 0; result[i][0]; i++) {
-        printf("%s", result[i]);
+        printf("%s\n", result[i]);
     }
-    printf("\n");
 
     for (size_t i = 0; result[i]; i++) {
         free(result[i]);
