@@ -4,7 +4,7 @@
 
 #include "../include/decoder.h"
 
-int main() {
+int main(void) {
     Decoder decoder = decoder_init("../asm/many_register_mov");
     char** result = decoder_decode(&decoder);
     if (result == NULL) {

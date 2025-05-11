@@ -20,8 +20,22 @@
     } \
 } while(0)
 
+char* test_load_immediat(void);
+char* test_single_register_mov(void);
+char* test_many_register_mov(void);
+
+int main(void) {
+    // RUN_TEST requires err_msg to work
+    char* err_msg = NULL;
+    RUN_TEST(test_load_immediat);
+    RUN_TEST(test_single_register_mov);
+    RUN_TEST(test_many_register_mov);
+
+    return EXIT_SUCCESS;
+}
+
 char* test_load_immediat() {
-    char *err_msg = calloc(256, sizeof(char));
+    char *const err_msg = calloc(256, sizeof(char));
 
     Decoder decoder = decoder_init("../asm/load_immediat");
     char** result = decoder_decode(&decoder);
@@ -37,7 +51,7 @@ char* test_load_immediat() {
         if (strcmp(expected[i], result[i]) != 0) {
             char* buff = calloc(100, sizeof(char));
             const char fmt[] = "ERROR: i=%ld, expected '%s' got '%s'\n";
-            const size_t fmt_size = sprintf(buff, fmt, i, expected[i], result[i]);
+            const size_t fmt_size = (size_t)sprintf(buff, fmt, i, expected[i], result[i]);
             strncpy(err_msg, buff, fmt_size);
             free(buff);
             break;
@@ -70,7 +84,7 @@ char* test_single_register_mov() {
         if (strcmp(expected[i], result[i]) != 0) {
             char* buff = calloc(100, sizeof(char));
             const char fmt[] = "ERROR: i=%ld, expected '%s' got '%s'\n";
-            const size_t fmt_size = sprintf(buff, fmt, i, expected[i], result[i]);
+            const size_t fmt_size = (size_t)sprintf(buff, fmt, i, expected[i], result[i]);
             strncpy(err_msg, buff, fmt_size);
             free(buff);
             break;
@@ -113,7 +127,7 @@ char* test_many_register_mov() {
         if (strcmp(expected[i], result[i]) != 0) {
             char* buff = calloc(100, sizeof(char));
             const char fmt[] = "ERROR: i=%ld, expected '%s' got '%s'\n";
-            const size_t fmt_size = sprintf(buff, fmt, i, expected[i], result[i]);
+            const size_t fmt_size = (size_t)sprintf(buff, fmt, i, expected[i], result[i]);
             strncpy(err_msg, buff, fmt_size);
             free(buff);
             break;
@@ -128,14 +142,4 @@ char* test_many_register_mov() {
     decoder_deinit(&decoder);
 
     return err_msg;
-}
-
-int main() {
-    // RUN_TEST requires err_msg to work
-    char* err_msg = NULL;
-    RUN_TEST(test_load_immediat);
-    RUN_TEST(test_single_register_mov);
-    RUN_TEST(test_many_register_mov);
-
-    return EXIT_SUCCESS;
 }

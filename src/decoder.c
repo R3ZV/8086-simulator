@@ -15,7 +15,7 @@ void decoder_deinit(Decoder *self) {
 /// read_file will allocate memmory enough
 /// to read the entire file.
 /// The caller is responsible to free the memmory.
-char* read_file(char const *const path) {
+char* read_file(const char *const path) {
     FILE *const fd = fopen(path, "r");
     if (fd == NULL) {
         perror("Error opening file!");
@@ -23,7 +23,7 @@ char* read_file(char const *const path) {
     }
 
     fseek(fd, 0, SEEK_END);
-    int32_t const filesize = ftell(fd);
+    const int32_t filesize = (int32_t) ftell(fd);
     if (filesize == -1) {
         perror("Couldn't determin file size!");
         fclose(fd);
@@ -38,14 +38,14 @@ char* read_file(char const *const path) {
         return NULL;
     }
 
-    char *const encoding = calloc(filesize + 1, sizeof(uint8_t));
+    char *const encoding = calloc((size_t)filesize + 1, sizeof(uint8_t));
     if (encoding == NULL) {
         perror("Not enough memory to read the file!");
         fclose(fd);
         return NULL;
     }
 
-    size_t const read_size = fread(encoding, sizeof(uint8_t), filesize, fd);
+    const size_t read_size = fread(encoding, sizeof(uint8_t), (size_t)filesize, fd);
     if (read_size != (size_t)filesize) {
         perror("Failed to read complete file");
         free(encoding);
@@ -57,13 +57,13 @@ char* read_file(char const *const path) {
     return encoding;
 }
 
-Decoder decoder_init(char const *const path) {
+Decoder decoder_init(const char *const path) {
     return (Decoder) {
         .instructions = read_file(path),
     };
 }
 
-char* decode_reg(int const reg, bool const wide) {
+const char* decode_reg(const int reg, const bool wide) {
     switch (reg) {
         case 0x0:
             if (wide) return "ax";
@@ -105,7 +105,7 @@ char* decode_reg(int const reg, bool const wide) {
 }
 
 // TODO:
-char* decode_effective_addr(uint8_t const reg, bool const wide) {
+char* decode_effective_addr(const uint8_t reg, const bool wide) {
     if (wide || reg > 1) {
         return NULL;
     }
@@ -117,7 +117,7 @@ typedef enum {
     IMMEDIAT_TO_REG = 0xB0,
 } DECODER_OPCODES;
 
-char** decoder_decode(Decoder const *const self) {
+char** decoder_decode(const Decoder *const self) {
     size_t lines = 0;
     char** result = calloc(1024, sizeof(char *));
     if (result == NULL) {
@@ -137,7 +137,7 @@ char** decoder_decode(Decoder const *const self) {
     lines++;
 
     for (size_t i = 0; self->instructions[i]; i++) {
-        uint8_t const opcode = self->instructions[i];
+        const uint8_t opcode = (uint8_t)self->instructions[i];
         if ((opcode & IMMEDIAT_TO_REG) == IMMEDIAT_TO_REG) {
             if (self->instructions[i + 1] == '\0') {
                 perror("Missing load immediat data\n");
@@ -146,8 +146,8 @@ char** decoder_decode(Decoder const *const self) {
 
             i += 1;
 
-            uint8_t const data_lo = self->instructions[i];
-            bool const wide = (opcode & 0x08) > 0;
+            const uint8_t data_lo = (uint8_t)self->instructions[i];
+            const bool wide = (opcode & 0x08) > 0;
 
             if (wide) {
                 if (self->instructions[i + 1] == '\0') {
@@ -157,17 +157,17 @@ char** decoder_decode(Decoder const *const self) {
                 i += 1;
             }
 
-            uint16_t data_hi = 0;
-            if (wide) data_hi = self->instructions[i];
+            uint8_t data_hi = 0;
+            if (wide) data_hi = (uint8_t)self->instructions[i];
 
-            char const *const reg = decode_reg(opcode & 0x7, wide);
+            const char *const reg = decode_reg(opcode & 0x7, wide);
 
-            uint16_t immediat = data_lo + (data_hi << 8);
+            uint16_t immediat = ((uint16_t)data_hi << 8) | data_lo;
 
             char* buff = calloc(1024, sizeof(char));
             assert(buff != NULL);
             char fmt[] = "mov %s, %d";
-            size_t fmt_size = sprintf(buff, fmt, reg, immediat);
+            size_t fmt_size = (size_t)sprintf(buff, fmt, reg, immediat);
 
             strncpy(result[lines], buff, fmt_size);
             free(buff);
@@ -180,20 +180,20 @@ char** decoder_decode(Decoder const *const self) {
             }
 
             i += 1;
-            uint8_t const operand = self->instructions[i];
+            const uint8_t operand = (uint8_t)self->instructions[i];
 
             // 1 for word, 0 for byte
-            bool const wide = (opcode & 0x01) > 0;
+            const bool wide = (opcode & 0x01) > 0;
 
-            uint8_t const reg = (operand & 0x38) >> 3;
-            char const *const reg_field1 = decode_reg(reg, wide);
+            const uint8_t reg = (operand & 0x38) >> 3;
+            const char *const reg_field1 = decode_reg(reg, wide);
 
-            uint8_t const reg_or_mem = operand & 0x07;
+            const uint8_t reg_or_mem = operand & 0x07;
 
             // 0 means that REG is the source
             // 1 means that REG is the destination
-            bool const direction = (opcode & 0x02) > 0;
-            char const * reg_field2 = decode_reg(reg_or_mem, wide);
+            const bool direction = (opcode & 0x02) > 0;
+            const char* reg_field2 = decode_reg(reg_or_mem, wide);
             if (direction) {
                 reg_field2 = decode_effective_addr(reg_or_mem, wide);
             }
@@ -203,8 +203,8 @@ char** decoder_decode(Decoder const *const self) {
             char *const buff = calloc(1024, sizeof(char));
             assert(buff != NULL);
 
-            char const fmt[] = "mov %s, %s";
-            size_t const fmt_size = sprintf(buff, fmt, reg_field2, reg_field1);
+            const char fmt[] = "mov %s, %s";
+            const size_t fmt_size = (size_t)sprintf(buff, fmt, reg_field2, reg_field1);
 
             strncpy(result[lines], buff, fmt_size);
             free(buff);
